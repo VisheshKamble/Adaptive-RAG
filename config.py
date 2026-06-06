@@ -18,7 +18,7 @@ GRAPH_DIR.mkdir(exist_ok=True)
 LLM_PROVIDER      = os.getenv("LLM_PROVIDER", "groq")    # "groq" | "mistral"
 GROQ_API_KEY      = os.getenv("GROQ_API_KEY", "")
 MISTRAL_API_KEY   = os.getenv("MISTRAL_API_KEY", "")
-LLM_MODEL         = os.getenv("LLM_MODEL", "llama-3.3-70b-versatile")
+LLM_MODEL         = os.getenv("LLM_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
 LLM_TEMPERATURE   = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 
 # ── Embeddings ────────────────────────────────────────────────────────────────
