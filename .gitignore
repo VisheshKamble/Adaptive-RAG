@@ -1,0 +1,70 @@
+# ── Environment & Secrets ─────────────────────────────────────────────────────
+# Never commit your API keys, credentials, or local environment overrides
+.env
+.env.*
+!.env.example
+
+# ── Python & Virtual Environments ─────────────────────────────────────────────
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Virtual environments (your local .venv folder)
+.venv/
+venv/
+ENV/
+env/
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ── Vector Database & Local Data ──────────────────────────────────────────────
+# Prevent local data, faiss indices, and vector stores from being committed
+*.index
+*.faiss
+data/
+inputs/
+storage/
+
+# ── IDEs & Editors ────────────────────────────────────────────────────────────
+# VS Code, Cursor, and PyCharm config files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# ── Operating System Clutter ──────────────────────────────────────────────────
+# macOS files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]ownload/
+Desktop.ini
