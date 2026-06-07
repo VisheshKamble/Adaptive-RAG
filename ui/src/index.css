@@ -1,0 +1,157 @@
+/* ── Google Fonts: Plus Jakarta Sans + DM Mono ──────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@300;400;500&display=swap');
+
+/* ── Design Tokens ──────────────────────────────────────────────────────── */
+:root {
+  /* Backgrounds */
+  --bg:           #ffffff;
+  --bg-soft:      #f9f9f9;
+  --bg-subtle:    #f4f4f5;
+  --bg-raised:    #ffffff;
+  --bg-overlay:   rgba(255,255,255,0.85);
+
+  /* Borders */
+  --line:         rgba(0,0,0,0.07);
+  --line-strong:  rgba(0,0,0,0.13);
+
+  /* Text */
+  --ink:          #0a0a0a;
+  --ink-2:        #3a3a3a;
+  --ink-3:        #6b6b6b;
+  --ink-4:        #a0a0a0;
+  --ink-5:        #c8c8c8;
+
+  /* Accents */
+  --blue:         #0066ff;
+  --blue-soft:    rgba(0,102,255,0.08);
+  --blue-border:  rgba(0,102,255,0.18);
+  --teal:         #00b4aa;
+  --teal-soft:    rgba(0,180,170,0.08);
+  --purple:       #7c3aed;
+  --purple-soft:  rgba(124,58,237,0.08);
+  --amber:        #d97706;
+  --amber-soft:   rgba(217,119,6,0.08);
+  --red:          #dc2626;
+  --red-soft:     rgba(220,38,38,0.08);
+  --green:        #059669;
+  --green-soft:   rgba(5,150,105,0.08);
+
+  /* Typography */
+  --font:         'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --mono:         'DM Mono', 'SF Mono', monospace;
+
+  /* Radii */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   20px;
+  --r-2xl:  28px;
+  --r-full: 9999px;
+
+  /* Shadows */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,.04);
+  --shadow-sm:  0 2px 8px rgba(0,0,0,.06);
+  --shadow-md:  0 4px 20px rgba(0,0,0,.08);
+  --shadow-lg:  0 12px 48px rgba(0,0,0,.1);
+  --shadow-xl:  0 24px 80px rgba(0,0,0,.12);
+
+  /* Transitions */
+  --ease:       cubic-bezier(0.16,1,0.3,1);
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { scroll-behavior:smooth; font-size:15px; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 2px; }
+
+/* ── Keyframes ──────────────────────────────────────────────────────────── */
+@keyframes spin      { to { transform: rotate(360deg); } }
+@keyframes pulse     { 0%,100%{opacity:1} 50%{opacity:.3} }
+@keyframes fadeUp    { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+@keyframes fadeIn    { from{opacity:0} to{opacity:1} }
+@keyframes shimmer   { 0%{transform:translateX(-100%)} 100%{transform:translateX(200%)} }
+@keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes slideInL  { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
+@keyframes scaleIn   { from{opacity:0;transform:scale(.94)} to{opacity:1;transform:scale(1)} }
+@keyframes float     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+
+.spin        { animation: spin .75s linear infinite; }
+.blink-dot   { animation: pulse 2s ease-in-out infinite; }
+.fade-up     { animation: fadeUp .5s var(--ease) both; }
+.fade-in     { animation: fadeIn .4s ease both; }
+.scale-in    { animation: scaleIn .35s var(--ease) both; }
+.slide-in-l  { animation: slideInL .3s var(--ease) both; }
+.float       { animation: float 4s ease-in-out infinite; }
+
+/* ── Tag chips ──────────────────────────────────────────────────────────── */
+.tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: var(--r-full);
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  letter-spacing: .05em; text-transform: uppercase; white-space: nowrap;
+}
+.tag-blue   { background:var(--blue-soft);   color:var(--blue);   border:1px solid var(--blue-border); }
+.tag-teal   { background:var(--teal-soft);   color:var(--teal);   border:1px solid rgba(0,180,170,.2); }
+.tag-green  { background:var(--green-soft);  color:var(--green);  border:1px solid rgba(5,150,105,.2); }
+.tag-amber  { background:var(--amber-soft);  color:var(--amber);  border:1px solid rgba(217,119,6,.2); }
+.tag-red    { background:var(--red-soft);    color:var(--red);    border:1px solid rgba(220,38,38,.2); }
+.tag-purple { background:var(--purple-soft); color:var(--purple); border:1px solid rgba(124,58,237,.2); }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: var(--r-md);
+  font-family: var(--font); font-size: 13.5px; font-weight: 600;
+  cursor: pointer; border: none; outline: none;
+  transition: all .2s var(--ease); text-decoration: none; white-space: nowrap;
+  letter-spacing: -.01em;
+}
+.btn-primary {
+  background: var(--ink); color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.18);
+}
+.btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(0,0,0,.22); }
+.btn-ghost {
+  background: transparent; color: var(--ink-3);
+  border: 1.5px solid var(--line-strong);
+}
+.btn-ghost:hover { background:var(--bg-subtle); color:var(--ink); border-color:var(--ink-5); }
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-raised); border: 1.5px solid var(--line);
+  border-radius: var(--r-xl); padding: 24px;
+  box-shadow: var(--shadow-xs);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.card:hover { border-color:var(--line-strong); box-shadow:var(--shadow-md); transform:translateY(-2px); }
+
+/* ── Gradient text ──────────────────────────────────────────────────────── */
+.grad {
+  background: linear-gradient(135deg,#0066ff 0%,#00b4aa 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Dot grid bg ────────────────────────────────────────────────────────── */
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(0,0,0,.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Utility ────────────────────────────────────────────────────────────── */
+.mono { font-family: var(--mono); }
+textarea:focus, input:focus { outline: none; }
