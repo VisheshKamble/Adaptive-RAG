@@ -19,7 +19,10 @@ from typing import List, Tuple
 import numpy as np
 from langchain_core.documents import Document
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_text_splitters import SentenceTransformersTokenTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+# all-MiniLM-L6-v2 max tokens ≈ 256  →  ~900 chars is a safe hard-split ceiling
+_FALLBACK_CHARS = 900
 
 import sys
 import os
@@ -89,11 +92,11 @@ class SemanticChunker:
             encode_kwargs={"normalize_embeddings": True},
         )
 
-        # fallback splitter for oversized chunks
-        self._token_splitter = SentenceTransformersTokenTextSplitter(
-            model_name=embedding_model,
-            chunk_overlap=chunk_overlap,
-            tokens_per_chunk=chunk_size,
+        # fallback splitter for oversized chunks — character-based, no token-limit constraint
+        self._char_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=_FALLBACK_CHARS,
+            chunk_overlap=chunk_overlap * 4,   # scale overlap to chars
+            separators=["\n\n", "\n", ". ", " ", ""],
         )
 
     # ── internal helpers ──────────────────────────────────────────────────────
@@ -133,8 +136,8 @@ class SemanticChunker:
         return chunks
 
     def _hard_split(self, text: str) -> List[str]:
-        """Fallback: split oversized chunks by token count."""
-        docs = self._token_splitter.create_documents([text])
+        """Fallback: split oversized chunks by character count."""
+        docs = self._char_splitter.create_documents([text])
         return [d.page_content for d in docs]
 
     # ── public API ────────────────────────────────────────────────────────────
