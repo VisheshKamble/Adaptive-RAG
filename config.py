@@ -15,10 +15,10 @@ FAISS_DIR.mkdir(exist_ok=True)
 GRAPH_DIR.mkdir(exist_ok=True)
 
 # ── LLM ───────────────────────────────────────────────────────────────────────
-LLM_PROVIDER      = os.getenv("LLM_PROVIDER", "groq")    # "groq" | "mistral"
-GROQ_API_KEY      = os.getenv("GROQ_API_KEY", "")
+LLM_PROVIDER      = os.getenv("LLM_PROVIDER", "mistral")   # "mistral" | "groq"
 MISTRAL_API_KEY   = os.getenv("MISTRAL_API_KEY", "")
-LLM_MODEL         = os.getenv("LLM_MODEL", "meta-llama/llama-4-scout-17b-16e-instruct")
+GROQ_API_KEY      = os.getenv("GROQ_API_KEY", "")
+LLM_MODEL         = os.getenv("LLM_MODEL", "mistral-small-2506")
 LLM_TEMPERATURE   = float(os.getenv("LLM_TEMPERATURE", "0.1"))
 
 # ── Embeddings ────────────────────────────────────────────────────────────────
@@ -29,8 +29,10 @@ EMBEDDING_MODEL   = os.getenv(
 EMBEDDING_DIM     = 384   # matches all-MiniLM-L6-v2
 
 # ── Chunking ──────────────────────────────────────────────────────────────────
-CHUNK_SIZE        = int(os.getenv("CHUNK_SIZE", "512"))
-CHUNK_OVERLAP     = int(os.getenv("CHUNK_OVERLAP", "64"))
+# all-MiniLM-L6-v2 hard token limit is 256 — keep CHUNK_SIZE below that.
+# SentenceTransformersTokenTextSplitter enforces this strictly.
+CHUNK_SIZE        = int(os.getenv("CHUNK_SIZE", "200"))
+CHUNK_OVERLAP     = int(os.getenv("CHUNK_OVERLAP", "20"))
 SEMANTIC_THRESHOLD = float(os.getenv("SEMANTIC_THRESHOLD", "0.85"))
 
 # ── Retrieval ─────────────────────────────────────────────────────────────────
