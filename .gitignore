@@ -68,3 +68,49 @@ ehthumbs.db
 ehthumbs_vista.db
 [Dd]ownload/
 Desktop.ini
+
+.env
+*.pyc
+__pycache__/
+faiss_index/
+memory_graph/
+temp_uploads/
+.venv/
+node_modules/
+dist/
+
+# ── Secrets — NEVER commit these ──────────────────────────────────────────────
+.env
+*.key
+*.pem
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# ── Generated data — large files, user-specific ───────────────────────────────
+faiss_index/
+memory_graph/
+temp_uploads/
+data/
+
+# ── Eval results ──────────────────────────────────────────────────────────────
+eval/results/
+
+# ── Node / Frontend ───────────────────────────────────────────────────────────
+ui/node_modules/
+ui/dist/
+ui/.env
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
