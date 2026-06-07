@@ -181,15 +181,18 @@ def make_nodes(
     # ── node: web_fallback ────────────────────────────────────────────────────
 
     def web_fallback(state: RAGState) -> dict:
+        import re
         trace = state.get("trace", [])
         trace.append("web_fallback")
 
         query = state.get("rewritten_query") or state["query"]
-        # append gaps to query for a more targeted web search
         gaps  = state.get("relevance_gaps", [])
         search_query = query
         if gaps:
-            search_query = f"{query} {' '.join(gaps[:2])}"
+            # clean gap: first gap only, max 50 chars, alphanumeric only
+            clean_gap = re.sub(r"[^a-zA-Z0-9 ]", "", gaps[0])[:50].strip()
+            if clean_gap:
+                search_query = f"{query} {clean_gap}"
 
         web_results = web_retriever.retrieve(search_query)
         web_docs    = [doc for doc, _ in web_results]
