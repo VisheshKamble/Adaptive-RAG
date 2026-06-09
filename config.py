@@ -65,3 +65,14 @@ GRAPH_FILE        = GRAPH_DIR / "memory.gpickle"
 
 # ── Evaluation ────────────────────────────────────────────────────────────────
 EVAL_DATASET_PATH = BASE_DIR / "eval" / "eval_dataset.json"
+
+from functools import lru_cache
+from langchain_huggingface import HuggingFaceEmbeddings
+
+@lru_cache(maxsize=1)
+def get_embedding_model():
+    return HuggingFaceEmbeddings(
+        model_name=EMBEDDING_MODEL,
+        model_kwargs={"device": "cpu"},
+        encode_kwargs={"normalize_embeddings": True},
+    )
