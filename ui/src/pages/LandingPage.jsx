@@ -1,3 +1,5 @@
+{/* Landing Page */}
+
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { motion, useScroll, useTransform, useInView, animate } from 'framer-motion'
