@@ -1,3 +1,5 @@
+
+""" graph/workflow.py — LangGraph state machine (the main orchestrator). """
 """
 graph/workflow.py — LangGraph state machine (the main orchestrator).
 
