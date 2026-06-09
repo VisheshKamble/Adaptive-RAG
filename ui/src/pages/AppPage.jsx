@@ -1,3 +1,4 @@
+{/* AppPage.jsx — main application interface with chat, trace, sources, and memory graph */}
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
