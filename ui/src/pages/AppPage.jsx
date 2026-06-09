@@ -1,4 +1,5 @@
 {/* AppPage.jsx — main application interface with chat, trace, sources, and memory graph */}
+{/* FIX #6 — live streaming of generated answer and active nodes during query processing */}
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
