@@ -248,6 +248,8 @@ export default function LandingPage(){
           }}/>
         ))}
 
+         {/* ── NAVBAR ──  Using NAVBAR from components */}
+
         {/* ── SPLIT BODY ── */}
         <motion.div className="hs"
           style={{opacity:heroOpac,display:'flex',alignItems:'center',gap:72,flex:1,paddingBottom:80,paddingTop:24,position:'relative',zIndex:1}}
