@@ -4,11 +4,22 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useDropzone } from 'react-dropzone'
 import { streamQuery, ingestFiles, getMemoryGraph, clearSession } from '../lib/api'
+import { useBackendUp } from '../components/RunLocal'
+import PipelineStrip from '../components/PipelineStrip'
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
 const scoreColor = s => s >= .8 ? '#0E9F83' : s >= .5 ? '#D9890B' : '#E5284F'
 const scoreLabel = s => s >= .8 ? 'High' : s >= .5 ? 'Med' : 'Low'
 const USER_ID = 'default'
+// cross-encoder scores are raw logits (-10..+10): squash to 0..1 for display
+const sig = s => 1 / (1 + Math.exp(-(s ?? 0)))
+// tiny **bold** renderer so answers don't show literal asterisks
+const cleanName = p => String(p || '').split(/[\\/]/).pop().replace(/^[0-9a-f]{32}_/, '')
+// renders **bold** and 【Source: path】 citations as small clean chips
+const Md = ({ t }) => <>{String(t).split(/(\*\*[^*]+\*\*|【Source:[^】]+】)/g).map((p, i) =>
+  p.startsWith('**') && p.endsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong>
+  : p.startsWith('【') ? <span key={i} className="cite" title={p.slice(8, -1).trim()}>↗ {cleanName(p.slice(8, -1).trim())}</span>
+  : p)}</>
 
 /* ── SVG icons ───────────────────────────────────────────────────────────── */
 const Ico = {
@@ -72,7 +83,8 @@ function TraceStep({ node, active, done }) {
 
 /* ── SourceCard ──────────────────────────────────────────────────────────── */
 function SourceCard({ source, idx }) {
-  const color = scoreColor(source.rerank_score ?? 0)
+  const norm  = sig(source.rerank_score)
+  const color = scoreColor(norm)
   return (
     <motion.div initial={{opacity:0,x:8}} animate={{opacity:1,x:0}} transition={{delay:idx*.06}}
       style={{ background:'var(--bg-soft)', border:'1.5px solid var(--line)', borderRadius:12, padding:'13px', marginBottom:8 }}>
@@ -80,17 +92,17 @@ function SourceCard({ source, idx }) {
         <div style={{ display:'flex', alignItems:'center', gap:6 }}>
           {source.web_result ? Ico.globe('#D9890B',11) : Ico.file('#2E3BFF',11)}
           <span style={{ fontSize:11, fontFamily:'var(--mono)', color:'var(--ink-3)', maxWidth:130, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-            {String(source.source || '').split('/').pop()}
+            {cleanName(source.source)}
           </span>
         </div>
         <span style={{ fontSize:10, color, fontFamily:'var(--mono)', fontWeight:600 }}>
-          {scoreLabel(source.rerank_score)} {(source.rerank_score??0).toFixed(2)}
+          {scoreLabel(norm)} {norm.toFixed(2)}
         </span>
       </div>
       <div style={{ marginBottom:8 }}>
         <div style={{ display:'flex', justifyContent:'space-between', marginBottom:4 }}>
           <span style={{ fontSize:9, color:'var(--ink-4)', fontFamily:'var(--mono)',  letterSpacing:'.06em' }}>relevance</span>
-          <span style={{ fontSize:9, color:'var(--ink-4)', fontFamily:'var(--mono)' }}>{(source.relevance_score??0).toFixed(2)}</span>
+          <span style={{ fontSize:9, color:'var(--ink-4)', fontFamily:'var(--mono)' }}>{source.relevance_score == null ? 'web · unscored' : source.relevance_score.toFixed(2)}</span>
         </div>
         <div style={{ height:2, background:'var(--line)', borderRadius:2, overflow:'hidden' }}>
           <motion.div initial={{width:0}} animate={{width:`${(source.relevance_score??0)*100}%`}} transition={{duration:.8,delay:idx*.08}}
@@ -232,6 +244,7 @@ export default function AppPage() {
   const [files,        setFiles]      = useState([])
   const [sidebarOpen,  setSidebar]    = useState(true)
   const [activePanel,  setPanel]      = useState('trace')
+  const online = useBackendUp()
   const cancelStream = useRef(null)
   const bottomRef    = useRef(null)
 
@@ -442,15 +455,17 @@ export default function AppPage() {
             </button>
             <div style={{width:1,height:16,background:'var(--line)'}}/>
             <span style={{fontSize:13,fontWeight:700,color:'var(--ink)',letterSpacing:'-.025em'}}>Proof desk</span>
-            <span className="tag tag-green" style={{fontSize:9.5,padding:'2px 9px',display:'inline-flex',alignItems:'center',gap:5}}>
+            <span className={`tag ${online===false?'tag-red':'tag-green'}`} style={{fontSize:9.5,padding:'2px 9px',display:'inline-flex',alignItems:'center',gap:5}}>
               <span style={{width:4,height:4,borderRadius:'50%',background:'currentColor',display:'inline-block'}}/>
-              live
+              {online===false?'api offline':'live'}
             </span>
           </div>
           <span style={{fontSize:11,color:'var(--ink-4)',fontFamily:'var(--mono)'}}>
             {files.filter(f=>f.status==='ready').length} docs · {messages.filter(m=>m.role==='user').length} queries
           </span>
         </div>
+
+        <PipelineStrip active={activeNodes} done={doneNodes} busy={loading}/>
 
         {/* Messages */}
         <div style={{flex:1,overflowY:'auto',padding:'24px 20px',display:'flex',flexDirection:'column',gap:14}}>
@@ -472,8 +487,14 @@ export default function AppPage() {
                 boxShadow:msg.role==='user'?'none':'inset 3px 0 0 var(--hi), var(--shadow-xs)',
                 letterSpacing:'-.01em', whiteSpace:'pre-wrap',
               }}>
-                {msg.content}
-                {msg.result && (
+                <Md t={msg.content}/>
+                {msg.result?.needs_clarification && (
+                  <div style={{display:'flex',gap:7,marginTop:12,flexWrap:'wrap'}}>
+                    <span className="tag tag-purple">Planner chose to ask, not search</span>
+                    <span className="tag tag-blue">{msg.result.latency_s}s · {msg.result.llm_calls} LLM call</span>
+                  </div>
+                )}
+                {msg.result && !msg.result.needs_clarification && (
                   <div style={{display:'flex',gap:7,marginTop:12,flexWrap:'wrap'}}>
                     <span className={`tag ${msg.result.confidence_score>0.7?'tag-green':'tag-amber'}`}>
                       Confidence {(msg.result.confidence_score*100).toFixed(0)}%
@@ -485,9 +506,12 @@ export default function AppPage() {
                     )}
                     {msg.result.hallucination_flag
                       ? <span className="tag tag-red" style={{display:'inline-flex',alignItems:'center',gap:4}}>{Ico.triangle()} Verify claims</span>
-                      : <span className="tag tag-green" style={{display:'inline-flex',alignItems:'center',gap:4}}>{Ico.check()} Grounded</span>
+                      : msg.result.confidence_score < 0.6
+                        ? <span className="tag tag-amber">Low confidence · check sources</span>
+                        : <span className="tag tag-green" style={{display:'inline-flex',alignItems:'center',gap:4}}>{Ico.check()} Grounded</span>
                     }
                     <span className="tag tag-blue">{msg.result.trace?.length || 0} nodes</span>
+                    {msg.result.latency_s != null && <span className="tag tag-blue" title="Measured pipeline time and LLM calls for this answer">{msg.result.latency_s}s · {msg.result.llm_calls} LLM calls</span>}
                   </div>
                 )}
               </div>
@@ -510,13 +534,27 @@ export default function AppPage() {
                 whiteSpace:'pre-wrap', minHeight:42,
               }}>
                 {streamText
-                  ? <>{streamText}<span className="cursor-blink"/></>
+                  ? <><Md t={streamText}/><span className="cursor-blink"/></>
                   : <span style={{color:'var(--ink-4)',fontFamily:'var(--mono)',fontSize:12.5}}>Running pipeline…</span>
                 }
               </div>
             </motion.div>
           )}
 
+          {messages.length<=1 && !loading && (
+            <>
+            <div className="welcome">
+              <span className="welcome-k">Proof desk</span>
+              <h2>Ask your documents anything.</h2>
+              <p>Drop a PDF, TXT or Markdown file on the left. Every answer is checked against your sources before you see it, and the strip above shows each check as it runs.</p>
+            </div>
+            <div className="chips">
+              {[['Summarise the key findings','Gets a grounded overview'],['What methodology was used?','Watch the retrieval trace'],['Compare the approaches described','Multi-part → sub-questions'],['What are the limitations?','Try something your docs lack → web fallback']].map(([q,h])=>(
+                <button key={q} className="chip" onClick={()=>setInput(q)}>{q}<small>{h}</small></button>
+              ))}
+            </div>
+            </>
+          )}
           <div ref={bottomRef}/>
         </div>
 

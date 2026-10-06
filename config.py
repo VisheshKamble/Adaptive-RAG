@@ -44,7 +44,7 @@ RRF_K             = int(os.getenv("RRF_K", "60"))         # RRF constant
 # ── Critique thresholds ───────────────────────────────────────────────────────
 RELEVANCE_THRESHOLD   = float(os.getenv("RELEVANCE_THRESHOLD", "0.5"))
 CONFIDENCE_THRESHOLD  = float(os.getenv("CONFIDENCE_THRESHOLD", "0.6"))
-MAX_RETRIES           = int(os.getenv("MAX_RETRIES", "2"))
+MAX_RETRIES           = int(os.getenv("MAX_RETRIES", "1"))
 
 # ── Web retrieval ─────────────────────────────────────────────────────────────
 TAVILY_API_KEY    = os.getenv("TAVILY_API_KEY", "")

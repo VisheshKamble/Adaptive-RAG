@@ -1,12 +1,15 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { GITHUB_URL } from '../lib/config'
 import { StarBtn, GhIcon } from '../components/Navbar'
+import RunLocal from '../components/RunLocal'
 
 /* The hero: one answer being proofread. Delays (--d) sequence a single pass. */
 function ProofCard() {
   const d = s => ({ '--d': `${s}s` })
   return (
     <div className="proof" role="img" aria-label="An answer being proofread: one claim is highlighted as sourced, one is struck out as unsupported and replaced, then the answer is stamped grounded.">
+      <span className="sticker" aria-hidden="true">grounded<br />or it&apos;s cut</span>
       <div className="proof-in">
         <div className="proof-q"><b>You</b>What did the benchmark show about faithfulness?</div>
         <div className="proof-doc">
@@ -80,13 +83,67 @@ const STEPS = [
   ['Answer critic', 'Checks every claim against the sources and flags unsupported ones.'],
   ['Memory graph', 'Saves the people, places and ideas it met for the next question.'],
 ]
-const NUMS = [['Faithfulness', .61, .89], ['Answer relevancy', .72, .91], ['Context precision', .58, .84], ['Context recall', .64, .88]]
-const pos = v => `${((v - .4) / .6) * 100}%`
+const AGENTS = [
+  ['Plans', 'Query analyser', 'Rewrites your question into a clearer one and splits compound questions into small, answerable parts.', '“Compare A and B, and list the limits” → 3 sub-questions'],
+  ['Judges sources', 'Relevance critic', 'Scores every retrieved passage from 0 to 1. Anything under 0.5 is thrown out, and if too little survives, the system goes to the web.', 'intro.txt · 0.22 → dropped'],
+  ['Judges answers', 'Answer critic', 'Reads the draft next to its sources, flags claims nothing supports and scores confidence. Below 0.6 it tries again, up to 2 times.', '“removed every hallucination” → no source, cut'],
+  ['Remembers', 'Memory updater', 'Pulls out people, organisations, concepts and dates from each exchange and stores them in a knowledge graph for later questions.', 'Faithfulness → RAGAS → 0.89'],
+]
+const JOURNEY = [
+  ['You upload', 'PDF, TXT and Markdown files are split into chunks and indexed twice: by meaning (FAISS) and by keyword (BM25).'],
+  ['You ask', 'The question is rewritten and decomposed, then both indexes are searched and the results merged.'],
+  ['It doubts itself', 'Each passage is scored. Weak evidence sends it to the web instead of letting the model guess.'],
+  ['It writes, then proofreads', 'The answer streams in, then a second critic checks every claim. Unsupported ones trigger a retry.'],
+  ['It learns', 'What it met is saved to the memory graph, so the next question starts smarter.'],
+]
 const PAPERS = [
   ['Self-RAG: Learning to Retrieve, Generate, and Critique', 'Asai et al., 2023'],
   ['Corrective Retrieval Augmented Generation', 'Yan et al., 2024'],
   ['From Local to Global: A Graph RAG Approach', 'Edge et al., 2024'],
 ]
+
+function Results() {
+  const [r, setR] = useState(null)
+  useEffect(() => { fetch('/api/eval').then(x => x.json()).then(setR).catch(() => setR({ available: false })) }, [])
+  const p = v => `${v * 100}%`
+  const rows = r?.available ? [
+    ['Answer correctness', r.plain.correctness, r.adaptive.correctness],
+    ['Backed by your documents', r.plain.doc_cited, r.adaptive.doc_cited],
+    ['Asks when a question is unclear', r.plain.clarify, r.adaptive.clarify],
+  ] : []
+  return (
+    <section id="results" className="alt">
+      <div className="wrap">
+        <h2>Measured, not claimed.</h2>
+        <p className="lead">
+          {r?.available
+            ? `Plain RAG against AdaptiveRAG on ${r.n_doc} document questions and ${r.n_vague} deliberately vague ones, scored by keyword match so no extra model judges itself. Run ${r.generated}.`
+            : 'No results yet. Index a PDF, then run the ablation to fill this section with your own numbers.'}
+        </p>
+        {r?.available ? (<>
+          <div className="legend"><span><i style={{ background: '#fff', border: '2px solid var(--ink-4)' }} />Plain RAG</span><span><i style={{ background: 'var(--pencil)' }} />AdaptiveRAG</span></div>
+          <div className="dumb">
+            {rows.map(([l, a, b]) => (
+              <div className="drow" key={l}>
+                <b>{l}</b>
+                <div className="track" role="img" aria-label={`${l}: plain ${a}, adaptive ${b}`}>
+                  <i className="seg" style={{ left: p(Math.min(a, b)), width: p(Math.abs(b - a)) }} />
+                  <i className="dot was" style={{ left: p(a) }} /><i className="dot now" style={{ left: p(b) }} />
+                </div>
+                <div className="val">{Math.round(b * 100)}%<small>plain {Math.round(a * 100)}%</small></div>
+              </div>
+            ))}
+          </div>
+          <div className="costgrid">
+            <div><small>Plain RAG</small><b>{r.plain.llm_calls} LLM call</b><span>{r.plain.latency_s}s per question</span></div>
+            <div><small>AdaptiveRAG</small><b>{r.adaptive.llm_calls} LLM calls</b><span>{r.adaptive.latency_s}s per question</span></div>
+            <p>The honest trade: checking costs time and tokens. You pay for it in speed and get sources you can trust. Model: <code>{r.model}</code>. Free-tier rate limits can inflate adaptive latency. Small test set, one document collection, so read it as direction, not proof. Reproduce with <code>python -m eval.ablation</code>.</p>
+          </div>
+        </>) : <pre className="term" style={{ marginTop: 28 }}><code>{`# 1. upload your PDF in the app, then:\npython -m eval.ablation`}</code></pre>}
+      </div>
+    </section>
+  )
+}
 
 export default function LandingPage() {
   return (
@@ -102,11 +159,44 @@ export default function LandingPage() {
             <div className="cta-row">
               <Link to="/app" className="btn btn-primary">Ask your documents</Link>
               <StarBtn big />
+              <a href="#run" className="btn">Run locally</a>
               <a href="#pipeline" className="btn">See the 8 steps</a>
             </div>
           </div>
           <ProofCard />
         </div>
+        <div className="marquee" aria-hidden="true"><div>{[...NODES, ...NODES, ...NODES, ...NODES].map((n, i) => <span key={i}>{n}</span>)}</div></div>
+      </section>
+
+      <section id="about">
+        <div className="wrap">
+          <h2>Not a chatbot. A small team of agents.</h2>
+          <p className="lead">
+            A normal RAG app searches once and trusts whatever the model says. AdaptiveRAG treats every step as
+            something that can go wrong, and has a dedicated agent to catch it. It decides for itself whether to
+            search the web, retry an answer or throw a source away.
+          </p>
+          <div className="agents">
+            {AGENTS.map(([k, t, d, ex]) => (
+              <article className="agent" key={t}>
+                <span className="agent-k">{k}</span>
+                <h3>{t}</h3>
+                <p>{d}</p>
+                <code>{ex}</code>
+              </article>
+            ))}
+          </div>
+          <h3 className="jt">What happens when you use it</h3>
+          <ol className="journey">
+            {JOURNEY.map(([t, d], i) => (
+              <li key={t}><b>{i + 1}</b><div><h4>{t}</h4><p>{d}</p></div></li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section id="run" className="runsec alt">
+        <div className="wrap"><RunLocal /></div>
       </section>
 
       <section id="pipeline" className="alt">
@@ -154,32 +244,14 @@ export default function LandingPage() {
               <p>People, places and ideas from each chat join a knowledge graph that later questions draw on.</p>
               <div className="frag">
                 <MiniGraph />
-                <div className="cycle">~3.2s<small>per full query cycle, analysis to memory update</small></div>
+                <div className="cycle">Measured<small>latency and LLM calls per question are reported below</small></div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section id="results" className="alt">
-        <div className="wrap">
-          <h2>Measured against plain RAG.</h2>
-          <p className="lead">Same documents, scored with RAGAS. Each row shows how far the score moved.</p>
-          <div className="legend"><span><i style={{ background: '#fff', border: '2px solid var(--ink-4)' }} />Plain RAG</span><span><i style={{ background: 'var(--pencil)' }} />AdaptiveRAG</span></div>
-          <div className="dumb">
-            {NUMS.map(([l, a, b]) => (
-              <div className="drow" key={l}>
-                <b>{l}</b>
-                <div className="track" role="img" aria-label={`${l}: plain RAG ${a.toFixed(2)}, AdaptiveRAG ${b.toFixed(2)}`}>
-                  <i className="seg" style={{ left: pos(a), width: `calc(${pos(b)} - ${pos(a)})` }} />
-                  <i className="dot was" style={{ left: pos(a) }} /><i className="dot now" style={{ left: pos(b) }} />
-                </div>
-                <div className="val">{b.toFixed(2)}<small>was {a.toFixed(2)}</small></div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Results />
 
       <section>
         <div className="wrap two">

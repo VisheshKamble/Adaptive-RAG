@@ -23,7 +23,7 @@ export default function Navbar() {
       </Link>
       {!isApp && (
         <nav className="nav-links" aria-label="Sections">
-          <a href="#pipeline">Pipeline</a><a href="#checks">Checks</a><a href="#results">Results</a>
+          <a href="#about">What it does</a><a href="#run">Run locally</a><a href="#pipeline">Pipeline</a><a href="#checks">Checks</a><a href="#results">Results</a>
         </nav>
       )}
       <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

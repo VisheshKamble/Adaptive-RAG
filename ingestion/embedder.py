@@ -166,6 +166,16 @@ class Embedder:
         with open(METADATA_FILE, "r", encoding="utf-8") as f:
             self.metadata = json.load(f)
 
+        # FIX: the three persisted files must stay in sync. If you deleted or
+        # replaced only some of them, refuse to load instead of crashing later.
+        n_vec, n_meta, n_bm = self.faiss_index.ntotal, len(self.metadata), len(self._corpus_tokens)
+        if not (n_vec == n_meta == n_bm):
+            self.faiss_index = None
+            raise ValueError(
+                f"Index files out of sync (faiss={n_vec}, metadata={n_meta}, bm25={n_bm}). "
+                f"Delete everything in {FAISS_DIR} and re-upload your documents."
+            )
+
         logger.info(
             "Loaded index: %d vectors, %d BM25 docs",
             self.faiss_index.ntotal,

@@ -29,7 +29,7 @@ from ingestion.loader   import load as load_document
 from ingestion.chunker  import SemanticChunker
 from ingestion.embedder import Embedder
 from memory.graph_store import GraphStore
-from graph.workflow     import build_workflow, run_query
+from graph.workflow     import build_workflow, run_query, count_llm_calls
 from utils.llm_factory  import get_llm
 
 logging.basicConfig(
@@ -281,11 +281,14 @@ async def _stream_pipeline(query: str, user_id: str) -> AsyncGenerator[str, None
                 if history_ctx:
                     augmented_query = f"{history_ctx}\n\nCurrent question: {query}"
 
+                import time as _t
+                _t0 = _t.perf_counter()
                 result = run_query(
                     app=_state["workflow_app"],
                     query=augmented_query,
                     user_id=user_id,
                 )
+                result["latency_s"] = round(_t.perf_counter() - _t0, 1)   # real pipeline time
                 result_queue.put(("ok", result))
             except Exception as exc:
                 result_queue.put(("err", str(exc)))
@@ -349,12 +352,15 @@ async def _stream_pipeline(query: str, user_id: str) -> AsyncGenerator[str, None
             "sources":            result.get("sources", []),
             "trace":              result.get("trace", []),
             "unsupported_claims": result.get("unsupported_claims", []),
+            "latency_s":          result.get("latency_s"),
+            "llm_calls":          count_llm_calls(result.get("trace", [])),
+            "needs_clarification": result.get("needs_clarification", False),
         })
 
         yield _sse("done", {})
 
     except Exception as e:
-        logger.error("Stream error: %s", e)
+        logger.exception("Stream error: %s", e)   # full traceback in the terminal
         yield _sse("error", {"message": str(e)})
 
 
@@ -490,6 +496,16 @@ async def index_stats() -> Dict[str, Any]:
         "graph_stats":   gs.stats()            if gs else {},
         "engine_state":  "ready" if _state["workflow_app"] not in (None, "NEEDS_INDEX") else "needs_index",
     }
+
+@app.get("/api/eval")
+async def eval_results() -> dict:
+    """Measured ablation results written by `python -m eval.ablation`."""
+    f = Path(__file__).parent / "eval" / "ablation_results.json"
+    if not f.exists():
+        return {"available": False}
+    from config import LLM_PROVIDER, LLM_MODEL
+    return {"available": True, "model": f"{LLM_PROVIDER}:{LLM_MODEL}", **json.loads(f.read_text(encoding="utf-8"))}
+
 
 @app.get("/api/health")
 async def health_check() -> Dict[str, str]:

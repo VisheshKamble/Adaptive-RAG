@@ -60,6 +60,8 @@ class BM25Retriever:
             score = float(scores[idx])
             if score <= 0.0:
                 continue                                         # irrelevant
+            if idx >= len(self.embedder.metadata):   # FIX: index/metadata desync guard
+                continue
             meta = self.embedder.metadata[idx]
             text = meta.pop("text")
             doc  = Document(page_content=text, metadata=dict(meta))

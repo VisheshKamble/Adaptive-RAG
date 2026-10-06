@@ -41,6 +41,8 @@ class QueryAnalysis(BaseModel):
     query_type: str = Field(
         description="One of: factual | analytical | comparative | conversational"
     )
+    needs_clarification: bool = Field(default=False, description="True only if the question cannot be answered without more information.")
+    clarifying_question: str = Field(default="", description="One short question to ask the user when needs_clarification is true.")
     requires_web: bool = Field(
         default=False,
         description="True if the query likely requires real-time or recent information.",
@@ -60,6 +62,7 @@ CRITICAL REWRITING RULES:
 5. If the query contains multiple distinct questions, list them as sub_questions.
 6. If the query is already simple and atomic, leave sub_questions as [].
 7. Set requires_web=true ONLY if the question clearly needs real-time data (news, market prices, current events).
+8. Set needs_clarification=true ONLY when the question is unanswerable without more info (e.g. "explain it", "what about that one?": a lone pronoun with no topic). Then write ONE short clarifying_question. Generic requests such as "summarise the document" are NOT ambiguous.
 
 EXAMPLES OF CORRECT REWRITING:
 - Input Query: "What are the limitations?"
@@ -73,7 +76,9 @@ Respond ONLY with valid JSON matching this schema:
   "rewritten_query": "...",
   "sub_questions": ["...", "..."],
   "query_type": "factual|analytical|comparative|conversational",
-  "requires_web": false
+  "requires_web": false,
+  "needs_clarification": false,
+  "clarifying_question": ""
 }}
 No preamble, no explanation, no markdown fences."""
 
@@ -115,6 +120,19 @@ class QueryAnalyser:
                 analysis = QueryAnalysis(**result)
             else:
                 analysis = result
+
+            # planner guard: only short, topic-less questions may trigger a clarification
+            core = query.split("Current question:")[-1].strip()
+            if analysis.needs_clarification and (len(core.split()) > 6 or not analysis.clarifying_question):
+                analysis.needs_clarification = False
+
+            # FIX: enforce rule 1 in code. LLMs ignore it, so drop any academic
+            # framing the user never typed and fall back to the original query.
+            orig, rw = query.lower(), analysis.rewritten_query.lower()
+            if any(w in rw and w not in orig for w in
+                   ("study", "paper", "research", "thesis", "experiment", "literature")):
+                logger.info("Rewrite added academic context; using original query.")
+                analysis.rewritten_query = query
 
             logger.info(
                 "Query analysis → rewritten='%s', sub_questions=%d, requires_web=%s",

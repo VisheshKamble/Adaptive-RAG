@@ -30,10 +30,16 @@ def get_llm():
 
     elif LLM_PROVIDER == "groq":
         from langchain_groq import ChatGroq
+        extra = {}
+        if "gpt-oss" in LLM_MODEL:
+            # reasoning tokens count toward Groq's tokens-per-minute limit; "low" keeps
+            # RAG calls cheap. Override with GROQ_REASONING_EFFORT=medium|high in .env.
+            extra["reasoning_effort"] = os.getenv("GROQ_REASONING_EFFORT", "low")   # explicit field, not model_kwargs
         return ChatGroq(
             model=LLM_MODEL,
             temperature=LLM_TEMPERATURE,
             groq_api_key=GROQ_API_KEY,
+            **extra,
         )
 
     elif LLM_PROVIDER == "ollama":

@@ -39,7 +39,7 @@ from agents.answer_critic    import AnswerCritic
 from agents.memory_updater   import MemoryUpdater
 from agents.query_analyser   import QueryAnalyser
 from agents.relevance_critic import RelevanceCritic
-from config                  import CONFIDENCE_THRESHOLD, MAX_RETRIES, TOP_K_FINAL
+from config                  import CONFIDENCE_THRESHOLD, MAX_RETRIES, TOP_K_FINAL, TOP_K_VECTOR, TOP_K_BM25
 from ingestion.embedder      import Embedder
 from memory.graph_store      import GraphStore
 from memory.memory_retriever import MemoryRetriever
@@ -63,6 +63,8 @@ class RAGState(TypedDict):
     sub_questions:      List[str]
     query_type:         str
     requires_web:       bool
+    needs_clarification: bool
+    clarifying_question: str
 
     # retrieval
     raw_chunks:         List[Document]
@@ -134,13 +136,17 @@ def make_nodes(
         # pull memory context first — feeds query rewriting
         mem_ctx = memory_retriever.retrieve_context(state["query"])
 
-        analysis = query_analyser.analyse(state["query"], memory_context=mem_ctx)
+        # FIX: memory context is NOT given to the rewriter (stale entities were
+        # injecting phantom context like "the study"). It is still passed on to generation.
+        analysis = query_analyser.analyse(state["query"], memory_context="")
 
         return {
             "rewritten_query":  analysis.rewritten_query,
             "sub_questions":    analysis.sub_questions,
             "query_type":       analysis.query_type,
             "requires_web":     analysis.requires_web,
+            "needs_clarification": analysis.needs_clarification,
+            "clarifying_question": analysis.clarifying_question,
             "memory_context":   mem_ctx,
             "trace":            trace,
         }
@@ -152,8 +158,10 @@ def make_nodes(
         trace.append("retrieve")
 
         query = state.get("rewritten_query") or state["query"]
-        results = hybrid_retriever.retrieve(query, top_k=TOP_K_FINAL * 2)
-        chunks  = [doc for doc, _ in results]
+        # FIX: fuse the FULL candidate pool, then let the cross-encoder (local, free) pick the
+        # best few for the critic. Before, a small fused slice could miss the answer chunk.
+        pool   = hybrid_retriever.retrieve(query, top_k=TOP_K_VECTOR + TOP_K_BM25)
+        chunks = reranker.rerank_docs(query, [doc for doc, _ in pool], top_k=max(6, TOP_K_FINAL))
 
         return {
             "raw_chunks":    chunks,
@@ -231,7 +239,7 @@ def make_nodes(
 
         query   = state.get("rewritten_query") or state["query"]
         chunks  = state.get("reranked_chunks") or state.get("raw_chunks", [])
-        mem_ctx = state.get("memory_context", "")
+        mem_ctx = state.get("memory_context", "") if os.getenv("USE_MEMORY_CONTEXT", "1") == "1" else ""
 
         # build context string
         context_parts = []
@@ -252,7 +260,9 @@ def make_nodes(
         hint = state.get("improvement_hint", "")
         if hint and state.get("retry_count", 0) > 0:
             messages.append(HumanMessage(
-                content=f"[Retry hint from previous attempt]: {hint}"
+                content=("[Retry] Your previous answer contained claims the context does not support: "
+                         f"{state.get('unsupported_claims', [])}. Rewrite it using ONLY facts stated in the context; "
+                         f"if the context lacks something, say so. {hint}")
             ))
 
         response = llm.invoke(messages)
@@ -304,6 +314,11 @@ def make_nodes(
 
         query  = state.get("rewritten_query") or state["query"]
         answer = state["answer"]
+
+        # FIX: only learn from answers that passed verification
+        if state.get("hallucination_flag") or state.get("confidence_score", 0.0) < CONFIDENCE_THRESHOLD:
+            logger.info("Skipping memory update: low-confidence or unverified answer.")
+            return {"final_response": answer, "trace": trace}
 
         extraction = memory_updater.extract(query, answer)
 
@@ -359,6 +374,21 @@ def route_on_hallucination(state: RAGState) -> str:
     return "pass"
 
 
+# ── cost transparency: every one of these nodes makes exactly one LLM call ────
+LLM_NODES = {"analyse_query", "critique_chunks", "generate_answer", "critique_answer", "update_memory"}
+
+
+def count_llm_calls(trace) -> int:
+    return sum(1 for n in trace if n in LLM_NODES)
+
+
+def clarify(state: RAGState) -> dict:
+    """Planner chose not to search: ask the user instead of guessing."""
+    q = state.get("clarifying_question") or "Could you tell me which topic or document section you mean?"
+    return {"answer": q, "final_response": q, "confidence_score": 1.0,
+            "trace": state.get("trace", []) + ["clarify"]}
+
+
 def increment_retry(state: RAGState) -> dict:
     """Thin node that bumps retry_count before looping back to retrieve."""
     return {"retry_count": state.get("retry_count", 0) + 1}
@@ -369,6 +399,7 @@ def increment_retry(state: RAGState) -> dict:
 def build_workflow(
     embedder:  Embedder,
     graph_store: GraphStore,
+    mode: str = "adaptive",   # "plain" = ablation baseline (no critics, web, or memory)
 ) -> StateGraph:
     """
     Assemble and compile the full LangGraph workflow.
@@ -409,14 +440,30 @@ def build_workflow(
 
     # add all nodes
     for name, fn in nodes.items():
+        if mode == "plain" and name not in ("retrieve", "rerank", "generate_answer"):
+            continue
         g.add_node(name, fn)
 
     # add retry increment node
-    g.add_node("increment_retry", increment_retry)
+    if mode != "plain":
+        g.add_node("increment_retry", increment_retry)
+        g.add_node("clarify", clarify)
 
     # add edges
+    if mode == "plain":   # baseline: retrieve -> rerank -> generate
+        g.set_entry_point("retrieve")
+        g.add_edge("retrieve", "rerank")
+        g.add_edge("rerank", "generate_answer")
+        g.add_edge("generate_answer", END)
+        return g.compile()
+
     g.set_entry_point("analyse_query")
-    g.add_edge("analyse_query", "retrieve")
+    g.add_conditional_edges(
+        "analyse_query",
+        lambda s: "clarify" if s.get("needs_clarification") else "retrieve",
+        {"clarify": "clarify", "retrieve": "retrieve"},
+    )
+    g.add_edge("clarify", END)
     g.add_edge("retrieve",      "critique_chunks")
 
     g.add_conditional_edges(
@@ -435,7 +482,7 @@ def build_workflow(
         {"pass": "update_memory", "retry": "increment_retry"},
     )
 
-    g.add_edge("increment_retry", "retrieve")   # loop back
+    g.add_edge("increment_retry", "generate_answer")   # FIX: regenerate from same evidence
     g.add_edge("update_memory", END)
 
     return g.compile()

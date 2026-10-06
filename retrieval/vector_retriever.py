@@ -56,6 +56,9 @@ class VectorRetriever:
         for score, idx in zip(scores[0], indices[0]):
             if idx == -1:          # FAISS returns -1 for empty slots
                 continue
+            if idx >= len(self.embedder.metadata):   # FIX: index/metadata desync guard
+                logger.warning("FAISS idx %d has no metadata; re-index your documents.", idx)
+                continue
             meta = self.embedder.metadata[idx]
             text = meta.pop("text")
             doc  = Document(page_content=text, metadata=dict(meta))

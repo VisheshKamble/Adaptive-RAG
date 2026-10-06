@@ -1,0 +1,111 @@
+[
+ {
+  "type": "doc",
+  "q": "What are the three sectors of ITU?",
+  "keywords": [
+   "ITU-R",
+   "ITU-T",
+   "ITU-D"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "When was the IEC founded and what does it cover?",
+  "keywords": [
+   "1906",
+   "electr"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What is the difference between CEN and CENELEC?",
+  "keywords": [
+   "CEN",
+   "CENELEC",
+   "electrotechnical"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "Does ANSI write technical standards itself?",
+  "keywords": [
+   "coordinat",
+   "accredit"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What does the ISI Mark indicate?",
+  "keywords": [
+   "conform",
+   "Indian Standard"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What is hallmarking in India used for?",
+  "keywords": [
+   "purity",
+   "precious"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What does CRS stand for and which products does it apply to?",
+  "keywords": [
+   "Compulsory Registration Scheme",
+   "electronic"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What are the four TBT principles?",
+  "keywords": [
+   "transparen",
+   "international standard",
+   "unnecessary"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What does presumption of conformity mean?",
+  "keywords": [
+   "EN standard",
+   "conform"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What is ICS and is it a standards organization?",
+  "keywords": [
+   "classification",
+   "subject"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "Which IEEE standards correspond to Wi-Fi and Ethernet?",
+  "keywords": [
+   "802.11",
+   "802.3"
+  ]
+ },
+ {
+  "type": "doc",
+  "q": "What was ASTM originally called and what is it known for?",
+  "keywords": [
+   "Testing and Materials",
+   "testing"
+  ]
+ },
+ {
+  "type": "vague",
+  "q": "Explain it",
+  "keywords": []
+ },
+ {
+  "type": "vague",
+  "q": "What about that one?",
+  "keywords": []
+ }
+]

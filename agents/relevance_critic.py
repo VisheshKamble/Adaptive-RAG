@@ -134,6 +134,11 @@ class RelevanceCritic:
             else:
                 critique = result
 
+            # FIX: the LLM's yes/no verdict was too strict. Two or more strongly relevant
+            # chunks is enough local evidence, so don't send an in-document question to the web.
+            if sum(cs.relevance_score >= 0.7 for cs in critique.chunk_scores) >= 2:
+                critique.overall_relevant = True
+
             # annotate original docs with their scores
             score_map = {cs.chunk_index: cs.relevance_score for cs in critique.chunk_scores}
             for i, doc in enumerate(chunks):
