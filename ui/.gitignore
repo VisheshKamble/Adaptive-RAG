@@ -25,6 +25,4 @@ dist-ssr
 
 # Node and npm artifacts (for JS/React projects in subfolders)
 node_modules/
-package-lock.json
-package.json
 .pytest_cache/
