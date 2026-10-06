@@ -110,6 +110,8 @@ eval/results/
 ui/node_modules/
 ui/dist/
 ui/.env
+!ui/src/lib/
+!ui/src/lib/**
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
